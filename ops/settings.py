@@ -20,6 +20,7 @@ messages = client.git("https://github.com/elchupanebrej/messages").commit(
     "cecd1fed3d47d59af7f0623f148f6752c9e93ee2").tree()
 
 # from .github/workflows/main.yml
+
 python_version = [
     "3.8",
     "3.9",
@@ -36,3 +37,6 @@ os = {
     "windows" : "latest",
     "macos" : "latest",
     }
+
+# let's make it easy for legacy references to {{ matrix.python_version }}' etc
+matrix = (python_version, os)
