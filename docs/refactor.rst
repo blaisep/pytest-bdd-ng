@@ -72,6 +72,11 @@ Consolidate settings
 
 ``settings.py`` for variables which you can then ``import`` into python.
 
+Install the airbags
+-------------------
+
+Plan for failure; U+1F4A9 custom exceptions will signal where your automation breaks.
+
 Run tests
 ---------
 

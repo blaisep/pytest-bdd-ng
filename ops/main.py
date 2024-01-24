@@ -1,22 +1,59 @@
 import sys
-
 import anyio
-
 import dagger
+import exceptions
 
-"""
-Copy files to the build container and list them.
-"""
-async def main():
-    async with dagger.Connection(dagger.Config(log_output=sys.stderr)) as client:
-        out = await (
-            client.container()
-            .from_("python:3.11-slim")
-            .with_directory("/host", client.host().directory("."))
-            .with_exec(["ls", "-al", "/host"])
-            .stdout()
-        )
+async def stage():
+    """ main.yaml workflow
 
-    print(out)
+            APIs:   minus one API: tox-gh-actions
+            Files: minus two file (main.yml, release
+            Extra: custom error handling
+            Submodules: minus 4
+    """
+    try:
+        async with dagger.Connection(dagger.Config(log_output=sys.stderr)) as client:
+            results = (
+                client.container()
+                # pull container
+                .from_("python:3.11-slim-buster") # later do the matrix from settings.python_versions[*]
+                .with_directory("/host", client.host().directory(
+                    ci_environment,
+                    compatibility,
+                    gherkin,
+                    messages,
+                    )   # Yay, no .gitmodules
+                .with_directory("/host", client.host().directory(../src, ../tests)
+                .with_exec(["python", "-m", "pip", "install", "--upgrade", "pip"])
+                .with_exec(["pip", "install", "--upgrade", "setuptools"])
+                .with_exec(["pip", "install", "--upgrade", "tox~=4.0", "codecov"]) # minus one API: tox-gh-actions
+                .with_exec(["tox"])
+                .with_exec(["codecov"])
+                .with_exec(["pip", "install", "--upgrade", "pip"])
+            )
+            await results
 
-anyio.run(main)
+    except exceptions.DaggerError as exc:
+        raise exc
+
+if __name__ == "__main__":
+    anyio.run(stage)
+    """
+    Refactor this workflow into python...
+              python -m pip install --upgrade pip
+              pip install -U setuptools
+              pip install "tox~=4.0" "tox-gh-actions~=3.0" codecov
+          - name: Test with tox
+            run: |
+              tox
+              codecov
+          - name: Build checking
+            if: "matrix.python-version == '3.12'"
+            env:
+              TWINE_USERNAME: __token__
+              TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+            run: |
+              python -m pip install --upgrade build twine
+              python -m build
+              twine check dist/*
+    """

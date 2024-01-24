@@ -12,7 +12,7 @@ async def main():
         compatibility = settings.compatibility,
         gherkin = settings.gherkin,
         messages = settings.messages,
-        out = await (
+        results = await (
             client.container()
             .from_("python:3.11-slim")
             .with_directory("/host", client.host().directory(
@@ -26,6 +26,6 @@ async def main():
             .stdout()
         )
 
-    print(out)
+    print(results)
 
 anyio.run(main)
