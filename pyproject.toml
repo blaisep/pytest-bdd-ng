@@ -43,7 +43,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12"
 ]
-# This is needed until ci-environment&messages become regular PyPi packages
+# This is needed until ops-environment&messages become regular PyPi packages
 dependencies = [
   "aiohttp",
   "attrs",

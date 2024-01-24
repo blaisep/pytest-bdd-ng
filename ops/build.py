@@ -1,7 +1,7 @@
 import sys
 import anyio
 import dagger
-from ci import settings
+from ops import settings
 
 """
 create the build container.

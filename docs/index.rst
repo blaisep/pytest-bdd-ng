@@ -9,9 +9,12 @@ Features
 ========
 
 .. toctree::
-   :glob:
+    :maxdepth: 1
+    :glob:
 
-   *
+    developer
+    features
+
 
 .. include:: features.rst
 
