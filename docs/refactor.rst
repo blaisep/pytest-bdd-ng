@@ -191,10 +191,16 @@ Conclusion
 Benefits
 --------
 
-    * Faster Cycle time
+.. class:: substep
+
+    * Caching reduces time and resources
+
     * Fewer APIs
+
     * Fewer Hosts
+
     * Zero gitmodules
+
     * Custom Error Handling
 
 ----
@@ -202,9 +208,14 @@ Benefits
 Takeaways
 =========
 
+.. class:: substep
+
     * There is always something you can measure
+
     * Consolidate your variables
+
     * Leverage your existing testing and instrumentation
+
 
 ------
 

@@ -5,9 +5,6 @@ Consolidate the settings into a single python file from the various existing fil
 from .github/workflows/release.yaml
 """
 
-from dotenv import dotenv_values
-env_vars = dotenv_values(".env")
-
 # Git copies these repos for each action, no caching from one run to another
 ci_environment = client.git("https://github.com/cucumber/ci-environment.git").commit(
     "e6acaf0b83d8eab649eb0bdc9ef2d6e18c14324e").tree()
