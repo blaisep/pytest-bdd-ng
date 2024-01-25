@@ -10,7 +10,7 @@ This section is introduced specifically for ``pytest-bdd-ng`` to help developers
 Reduce dependence on Github Actions
 ===================================
 
-Currently the Github action can take as much as 29 minutes and it has pinned [dependencies in other repos](https://github.com/blaisep/pytest-bdd-ng/blob/default/.github/workflows/main.yml#L33).
+Currently the Github action can take as much as 29 minutes and it has pinned `dependencies in other repos<https://github.com/blaisep/pytest-bdd-ng/blob/default/.github/workflows/main.yml#L33>`_ .
 
 I intend to implement local CI so that:
 - We can easily rotate external dependencies
