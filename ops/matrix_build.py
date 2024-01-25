@@ -1,7 +1,7 @@
 import os
 import sys
 import anyio
-from pathlib import Path
+import itertools
 import dagger
 import settings
 
@@ -22,6 +22,8 @@ async def main():
         src = client.host().directory(os.path.abspath(settings.dir_source))
         tests = client.host().directory(os.path.abspath(settings.dir_tests))
         python = (
+        for settings.os, settings.python_version in itertools.product(settings.matrix.os_version,
+                                                                      settings.matrix.python_version):
             client.container()
             # pull container
             .from_("python:3.11-slim-buster")
