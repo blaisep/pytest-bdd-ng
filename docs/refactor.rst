@@ -152,6 +152,7 @@ Throw custom exceptions to let you know something failed
 This is an example of custom exceptions. You could also include telemetry and tracing.
 
 .. code:: python
+
     class OpsError(Exception):
         """Base class for exceptions in the ops module."""
         pass
