@@ -42,6 +42,7 @@ from messages import (  # type:ignore[attr-defined]
     TestStepStarted,
     Timestamp,
 )
+from pytest_bdd.compatibility.path import relpath
 from pytest_bdd.compatibility.pytest import (
     Config,
     FixtureDef,
@@ -90,7 +91,7 @@ class MessagePlugin:
                 last_enter = True
             lock = FileLock(f"{messages_file_path}.lock")
             with lock:
-                with Path(messages_file_path).open(mode="at+", buffering=1) as f:
+                with Path(messages_file_path).open(mode="at+", buffering=1, encoding="utf-8") as f:
                     lines = []
                     while not queue.empty():
                         try:
@@ -154,7 +155,7 @@ class MessagePlugin:
                 pickle = get_metafunc_call_arg(call, "scenario")
                 feature_source: Source = get_metafunc_call_arg(call, "feature_source")
 
-                if is_set(feature) and feature_source.uri not in feature_registry:
+                if is_set(feature) and hasattr(feature_source, "uri") and feature_source.uri not in feature_registry:
                     feature_registry.add(feature_source.uri)
                     cast(Config, config).hook.pytest_bdd_message(config=config, message=Message(source=feature_source))
 
@@ -252,7 +253,7 @@ class MessagePlugin:
                         id=cast(PytestBDDIdGeneratorHandler, config).pytest_bdd_id_generator.get_next_id(),
                         **({"name": hook_name} if hook_name is not None else {}),
                         source_reference=SourceReference(
-                            uri=os.path.relpath(
+                            uri=relpath(
                                 getfile(func),
                                 str(get_config_root_path(cast(Config, config))),
                             ),

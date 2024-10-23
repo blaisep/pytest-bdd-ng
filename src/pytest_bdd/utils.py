@@ -28,8 +28,11 @@ from typing import (
     cast,
     runtime_checkable,
 )
+from urllib.parse import urlparse
 
-from pytest_bdd.compatibility.pytest import FixtureDef, fail
+from _pytest.fixtures import FixtureDef, FixtureRequest
+
+from pytest_bdd.compatibility.pytest import PYTEST8, PYTEST81, fail
 from pytest_bdd.const import ALPHA_REGEX, PYTHON_REPLACE_REGEX
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -147,21 +150,21 @@ class DefaultMapping(defaultdict):
         return cls(bool_or_items, warm_up_keys=warm_up_keys)
 
 
-def inject_fixture(request, arg, value):
+def inject_fixture(request: FixtureRequest, arg: str, value: Any) -> None:
     """Inject fixture into pytest fixture request.
-
     :param request: pytest fixture request
     :param arg: argument name
     :param value: argument value
     """
 
     fd = FixtureDef(
-        fixturemanager=request._fixturemanager,
+        **({"config": request.config} if PYTEST81 else {"fixturemanager": request._fixturemanager}),
         baseid=None,
         argname=arg,
         func=lambda: value,
         scope="function",
         params=None,
+        **({"_ispytest": True} if PYTEST8 else {}),
     )
     fd.cached_result = (value, 0, None)
 
@@ -190,7 +193,7 @@ def _itemgetter(*items):
         if len(items) == 0:
             return []
         elif len(items) == 1:
-            return [obj[items[0]]]
+            return [obj[items[0]]] if items[0] != "" else []
         else:
             return itemgetter(*items)(obj)
 
@@ -332,3 +335,18 @@ def doesnt_raise(
             fail(f"{ex_value}")
         elif not suppress_not_matched:
             raise
+
+
+def is_local_url(urllike):
+    try:
+        return not any(attrgetter("scheme", "netloc")(urlparse(urllike)))
+    except Exception:
+        return False
+
+
+def is_url_parsable(urllike):
+    try:
+        urlparse(str(urllike))
+        return True
+    except ValueError:
+        return False

@@ -15,7 +15,7 @@ from textwrap import dedent
 
 from docopt import docopt
 
-SECTION_SYMBOLS = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+SECTION_SYMBOLS = "-#!\"$%&'()*+,./:;<=>?@[\\]^_`{|}~="
 
 
 def convert(features_path: Path, output_file_path: Path):
@@ -32,15 +32,27 @@ def convert(features_path: Path, output_file_path: Path):
     content += dedent(
         # language=rst
         """\
+            Features
+            ========
+
             .. NOTE:: Features below are part of end-to-end test suite; You always could find most specific
                       use cases of **pytest-bdd-ng** by investigation of its regression
                       test suite https://github.com/elchupanebrej/pytest-bdd-ng/tree/default/tests
-
         """
     )
 
     while processable_paths:
         processable_path = processable_paths.popleft()
+
+        processable_rel_path = processable_path.relative_to(features_path)
+        content += dedent(
+            # language=rst
+            f"""\
+                {processable_rel_path.name}
+                {SECTION_SYMBOLS[len(processable_rel_path.parts) - 1] * len(processable_rel_path.name)}
+
+            """
+        )
 
         gherkin_file_paths = chain(processable_path.glob("*.gherkin"), processable_path.glob("*.feature"))
         struct_bdd_file_paths = processable_path.glob("*.bdd.yaml")
@@ -48,11 +60,12 @@ def convert(features_path: Path, output_file_path: Path):
         sub_processable_paths = list(filter(methodcaller("is_dir"), processable_path.iterdir()))
 
         for path in gherkin_file_paths:
+            rel_path = path.relative_to(features_path)
             content += dedent(
                 # language=rst
                 f"""\
-                    {path.name}
-                    {SECTION_SYMBOLS[len(path.relative_to(features_path).parts)-1]*len(path.name)}
+                    {rel_path.stem}
+                    {SECTION_SYMBOLS[len(rel_path.parts)-1]*len(rel_path.stem)}
 
                     .. include:: {(output_path_rel_to_features_path / path.relative_to(features_path)).as_posix()}
                        :code: gherkin
@@ -61,11 +74,12 @@ def convert(features_path: Path, output_file_path: Path):
             )
 
         for path in struct_bdd_file_paths:
+            rel_path = path.relative_to(features_path)
             content += dedent(
                 # language=rst
                 f"""\
-                    {path.name}
-                    {SECTION_SYMBOLS[len(path.relative_to(features_path).parts)-1]*len(path.name)}
+                    {rel_path.stem}
+                    {SECTION_SYMBOLS[len(rel_path.parts)-1]*len(rel_path.stem)}
 
                     .. include:: {(output_path_rel_to_features_path / path.relative_to(features_path)).as_posix()}
                        :code: yaml
@@ -73,7 +87,7 @@ def convert(features_path: Path, output_file_path: Path):
                 """
             )
 
-        processable_paths.extend(sub_processable_paths)
+        processable_paths.extendleft(sub_processable_paths)
     return content.rstrip("\n") + "\n"
 
 

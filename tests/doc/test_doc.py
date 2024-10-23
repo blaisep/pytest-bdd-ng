@@ -31,21 +31,29 @@ def test_doc_generation(testdir: "Testdir"):
     output = convert(features_path.resolve(), output_path.resolve())
     assert output == dedent(
         # language=rst
-        '''\
+        """\
+            Features
+            ========
+
             .. NOTE:: Features below are part of end-to-end test suite; You always could find most specific
                       use cases of **pytest-bdd-ng** by investigation of its regression
                       test suite https://github.com/elchupanebrej/pytest-bdd-ng/tree/default/tests
 
-            simple.gherkin
-            !!!!!!!!!!!!!!
+
+
+            simple
+            ------
 
             .. include:: features/simple.gherkin
                :code: gherkin
 
-            other_simple.gherkin
-            """"""""""""""""""""
+            extra
+            -----
+
+            other_simple
+            ############
 
             .. include:: features/extra/other_simple.gherkin
                :code: gherkin
-        '''
+        """
     )

@@ -43,12 +43,12 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12"
 ]
-# This is needed until ci-environment&messages become regular PyPi packages
 dependencies = [
   "aiohttp",
   "attrs",
   "certifi",
-  "cuke-ci-environment==0.1.0",
+  "ci-environment",
+  # This is needed until messages become regular PyPi package https://github.com/cucumber/messages/pull/165
   "cuke-messages==0.1.0",
   "cucumber-expressions",
   "decopatch",
@@ -63,6 +63,7 @@ dependencies = [
   "packaging",
   "parse",
   "parse_type>=0.6.0",
+  "pathvalidate",
   "py",
   "pydantic>=2.0.3",
   "pytest>=5.0",
@@ -80,7 +81,7 @@ name = "pytest-bdd-ng"
 readme = {file = "README.rst", content-type = "text/x-rst"}
 requires-python = ">=3.8"
 urls = {Repository = "https://github.com/elchupanebrej/pytest-bdd-ng"}
-version = "2.1.3"
+version = "2.2.0"
 
 [project.entry-points]
 pytest11 = {"pytest-bdd" = "pytest_bdd.plugin"}

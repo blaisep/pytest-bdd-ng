@@ -2,16 +2,16 @@ from collections import deque
 from contextlib import suppress
 from functools import partial
 from inspect import signature
-from itertools import chain, filterfalse, starmap
+from itertools import chain, starmap
 from operator import attrgetter, contains, methodcaller
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Collection, Deque, Iterable, Optional, Sequence, Union
 from unittest.mock import patch
-from urllib.parse import urlparse
 
 import pytest
 from _pytest.nodes import Collector
+from pathvalidate import is_valid_filepath
 
 from messages import Pickle  # type:ignore[attr-defined]
 from messages import PickleStep as Step  # type:ignore[attr-defined]
@@ -20,6 +20,7 @@ from pytest_bdd.allure_logging import AllurePytestBDD
 from pytest_bdd.collector import FeatureFileModule as FeatureFileCollector
 from pytest_bdd.collector import Module as ModuleCollector
 from pytest_bdd.compatibility.pytest import (
+    PYTEST7,
     Config,
     FixtureRequest,
     Mark,
@@ -41,7 +42,7 @@ from pytest_bdd.scenario import add_options as scenario_add_options
 from pytest_bdd.scenario import scenarios
 from pytest_bdd.scenario_locator import FileScenarioLocator, UrlScenarioLocator
 from pytest_bdd.steps import StepHandler
-from pytest_bdd.utils import IdGenerator, compose, getitemdefault, setdefaultattr
+from pytest_bdd.utils import IdGenerator, compose, getitemdefault, is_url_parsable, setdefaultattr
 
 if STRUCT_BDD_INSTALLED:
     from pytest_bdd.struct_bdd.plugin import StructBDDPlugin
@@ -144,10 +145,22 @@ def pytest_unconfigure(config: Config) -> None:
     cucumber_json.unconfigure(config)
 
 
-@pytest.hookimpl(hookwrapper=True)
-def pytest_pycollect_makemodule(path, parent, module_path=None):
+def _pytest_pycollect_makemodule():
     with patch("_pytest.python.Module", new=ModuleCollector):
         yield
+
+
+if PYTEST7:
+
+    @pytest.hookimpl(hookwrapper=True)
+    def pytest_pycollect_makemodule(parent, module_path):
+        yield from _pytest_pycollect_makemodule()
+
+else:
+
+    @pytest.hookimpl(hookwrapper=True)
+    def pytest_pycollect_makemodule(path, parent):
+        yield from _pytest_pycollect_makemodule()
 
 
 @pytest.hookimpl(tryfirst=True)
@@ -193,7 +206,7 @@ def _build_scenario_locators_from_mark(mark: Mark, config: Config) -> Iterable[A
     features_base_url = mark.kwargs.get("features_base_url")
     if features_base_url is None:
         try:
-            features_base_url = config.getini("bdd_features_base_url")
+            features_base_url = config.getini("bdd_features_base_url") or None
         except (ValueError, KeyError):
             features_base_url = None
     if callable(features_base_url):
@@ -211,30 +224,15 @@ def _build_scenario_locators_from_mark(mark: Mark, config: Config) -> Iterable[A
 
     feature_paths = list(mark_arguments["feature_paths"] or [])
 
-    def is_valid_local_url(urllike: str):
-        try:
-            return not any(attrgetter("scheme", "netloc")(urlparse(urllike)))
-        except ValueError:
-            return False
-
-    def is_valid_local_path(pathlike):
-        try:
-            return Path(pathlike).exists()
-        except OSError:
-            return False
-
-    def is_local_path(pathlike: Union[Path, str]):
-        if features_path_type is FeaturePathType.PATH:
-            return True
-        elif features_path_type is FeaturePathType.URL:
-            return False
-        if is_valid_local_url(str(pathlike)):
-            return True
-        else:
-            return is_valid_local_path(pathlike)
+    if features_path_type is FeaturePathType.PATH:
+        file_locator_feature_paths = feature_paths
+    elif features_path_type is FeaturePathType.UNDEFINED:
+        file_locator_feature_paths = [*filter(lambda p: is_valid_filepath(Path(p), platform="auto"), feature_paths)]
+    else:
+        file_locator_feature_paths = []
 
     path_locator = FileScenarioLocator(  # type: ignore[call-arg]
-        feature_paths=filter(is_local_path, feature_paths),
+        feature_paths=file_locator_feature_paths,
         filter_=filter_,
         encoding=mark_arguments["encoding"],
         features_base_dir=features_base_dir,
@@ -245,8 +243,15 @@ def _build_scenario_locators_from_mark(mark: Mark, config: Config) -> Iterable[A
 
     locators_iterables.append([path_locator])
 
+    if features_path_type is FeaturePathType.URL:
+        url_locator_feature_paths = feature_paths
+    elif features_path_type is FeaturePathType.UNDEFINED:
+        url_locator_feature_paths = [*filter(is_url_parsable, feature_paths)]
+    else:
+        url_locator_feature_paths = []
+
     url_locator = UrlScenarioLocator(  # type: ignore[call-arg]
-        url_paths=filterfalse(is_local_path, feature_paths),
+        url_paths=url_locator_feature_paths,
         filter_=mark_arguments["filter_"],
         encoding=mark_arguments["encoding"],
         features_base_url=features_base_url,
@@ -298,12 +303,12 @@ def pytest_cmdline_main(config: Config) -> Optional[int]:
     return generation.cmdline_main(config)
 
 
-def pytest_collect_file(parent: Collector, path, file_path=None):
-    file_path = file_path or Path(path)
+def _pytest_collect_file(parent: Collector, file_path=None):
+    file_path = Path(file_path)
     config = parent.session.config
     is_enabled_feature_autoload = config.getoption("feature_autoload")
     if is_enabled_feature_autoload is None:
-        is_enabled_feature_autoload = config.getini("feature_autoload")
+        is_enabled_feature_autoload = not config.getini("disable_feature_autoload")
     if not is_enabled_feature_autoload:
         return
 
@@ -312,6 +317,17 @@ def pytest_collect_file(parent: Collector, path, file_path=None):
 
     if hook.pytest_bdd_is_collectible(config=config, path=Path(file_path)):
         return FeatureFileCollector.build(parent=parent, file_path=file_path)
+
+
+if PYTEST7:  # Done intentionally because of API change
+
+    def pytest_collect_file(parent: Collector, file_path):
+        return _pytest_collect_file(parent=parent, file_path=file_path)
+
+else:
+
+    def pytest_collect_file(parent: Collector, path):  # type: ignore[misc]
+        return _pytest_collect_file(parent=parent, file_path=path)
 
 
 @pytest.mark.trylast
